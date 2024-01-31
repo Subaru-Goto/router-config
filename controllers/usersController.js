@@ -62,10 +62,18 @@ export const updateUser = async (req, res) => {
     res.send({ error: result.array() });
   };
 
-  const updateText =
-   Object.entries(req.body).map(
-    item => `${item[0]} = '${item[1]}'`)
-    .join(",");
+  // Bad example - having a risk of sql injection
+  // const updateText =
+  //  Object.entries(req.body).map(
+  //   item => `${item[0]} = '${item[1]}'`)
+  //   .join(",");
+
+  const updateColumns = Object.keys(req.body);
+  const updateValues = Object.values(req.body);
+  // $1 is taken for id so starting from 2
+  const updateText = updateColumns.map(
+    (field, index) => `${field} = $${index + 2}`
+    ).join(",");
 
   const queryText = `
     UPDATE users
@@ -74,14 +82,14 @@ export const updateUser = async (req, res) => {
     RETURNING *`;
 
   try{
-    const { rows: user } = await pool.query(queryText, [id]);
+    const { rows: user } = await pool.query(queryText, [id, ...updateValues]);
     if (user.length === 0) {
       res.sendStatus(400);
     } else {
       res.status(200).send(user[0]);
     };
   } catch(error) {
-    res.status(500).send("Server error");
+    res.status(500).send(error.message);
   };
 };
 
