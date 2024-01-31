@@ -3,11 +3,8 @@ import { validationResult } from "express-validator";
 
 export const getAllUsers = async (req, res) => {
   try{
-    const { rows: users } = await pool.query(
-      `
-      SELECT *
-      FROM users;
-      `); 
+    const queryText = `SELECT * FROM users;`
+    const { rows: users } = await pool.query(queryText); 
     if(users.length === 0) {
       res.sendStatus(404);
     } else {
@@ -21,12 +18,8 @@ export const getAllUsers = async (req, res) => {
 export const getSingleUser = async (req, res) => {
   const { id } = req.params;
   try{
-    const { rows: user} = await pool.query(
-      `
-      SELECT *
-      FROM users
-      WHERE id = $1;
-      `, [id]);
+    const queryText = `SELECT * FROM users WHERE id = $1;`;
+    const { rows: user} = await pool.query(queryText, [id]);
     if(user.length === 0) {
       res.sendStatus(404);
     } else {
@@ -45,12 +38,11 @@ export const createNewUser = async (req, res) => {
   };
 
   try {
-    const { rows: user } = await pool.query(
-
-      `
+    const queryText = `
       INSERT INTO users (first_name, last_name)
       VALUES ($1, $2) RETURNING *;
-      `, [first_name, last_name]);
+    `
+    const { rows: user } = await pool.query(queryText, [first_name, last_name]);
 
     if (user.length === 0) {
       res.sendStatus(400);
@@ -96,11 +88,12 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
   try{
-    const { rows: user } = await pool.query(`
-    DELETE FROM users
-    WHERE id = $1
-    RETURNING *;
-    `, [id]);
+    const queryText = `
+      DELETE FROM users
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const { rows: user } = await pool.query(queryText, [id]);
 
     if ( user.length === 0) {
       res.sendStatus(404);
@@ -115,12 +108,12 @@ export const deleteUser = async (req, res) => {
 export const checkExistingUser = async (req, res, next) => {
   const { id } = req.params;
     try {
-      const { rows: user } = await pool.query(
-        `
+      const queryText = `
         SELECT id
         FROM users
-        WHERE id = $1
-        `, [id]);
+        WHERE id = $1;
+      `;
+      const { rows: user } = await pool.query(queryText, [id]);
 
       if (user.length === 0) {
         res.status(404).send("There is no user in the db.");
