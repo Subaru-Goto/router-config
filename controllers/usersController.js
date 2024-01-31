@@ -72,7 +72,7 @@ export const updateUser = async (req, res) => {
   const updateValues = Object.values(req.body);
   // $1 is taken for id so starting from 2
   const updateText = updateColumns.map(
-    (field, index) => `${field} = $${index + 2}`
+    (column, index) => `${column} = $${index + 2}`
     ).join(",");
 
   const queryText = `
