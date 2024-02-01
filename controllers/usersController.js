@@ -1,40 +1,29 @@
 import { pool } from "../db/pool.js";
 import { validationResult } from "express-validator";
 
-export const getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res, next) => {
   try{
     const queryText = `SELECT * FROM users;`
     const { rows: users } = await pool.query(queryText); 
     if(users.length === 0) {
-      res.sendStatus(404);
+      return next({statusCode:404, message:"Bad Request"});
     } else {
       res.status(200).send(users);
     }
   } catch(error) {
-    res.status(500).send("Server error");
+    next(error);
   }
 };
 
-export const getSingleUser = async (req, res) => {
-  const { id } = req.params;
-  try{
-    const queryText = `SELECT * FROM users WHERE id = $1;`;
-    const { rows: user} = await pool.query(queryText, [id]);
-    if(user.length === 0) {
-      res.sendStatus(404);
-    } else {
-      res.status(200).send(user[0])
-    };
-  } catch(error) {
-    res.status(500).send("Server Error");
-  };
+export const getSingleUser = (req, res, next) => {
+  res.status(200).send(req.user);
 };
 
 export const createNewUser = async (req, res) => {
   const { first_name, last_name } = req.body;
   const result = validationResult(req);
   if (!result.isEmpty()) {
-    res.send({ error: result.array() });
+    return res.send({ error: result.array() });
   };
 
   try {
@@ -45,21 +34,21 @@ export const createNewUser = async (req, res) => {
     const { rows: user } = await pool.query(queryText, [first_name, last_name]);
 
     if (user.length === 0) {
-      res.sendStatus(400);
+      return next({statusCode:400, message: "No user is created."});
     } else {
       res.status(201).send(user[0]);
     };
   } catch (error) {
-    res.status(500).send("Server error");
+    next(error);
   }
 };
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (req, res, next) => {
   const { id } = req.params;
   const result = validationResult(req);
 
   if (!result.isEmpty()) {
-    res.send({ error: result.array() });
+    return res.send({ error: result.array() });
   };
 
   // Bad example - having a risk of sql injection
@@ -84,12 +73,12 @@ export const updateUser = async (req, res) => {
   try{
     const { rows: user } = await pool.query(queryText, [id, ...updateValues]);
     if (user.length === 0) {
-      res.sendStatus(400);
+      return next({statusCode: 400, message: "Bad request"});
     } else {
       res.status(200).send(user[0]);
     };
-  } catch(error) {
-    res.status(500).send(error.message);
+  } catch(err) {
+    next(err);
   };
 };
 
@@ -104,12 +93,12 @@ export const deleteUser = async (req, res) => {
     const { rows: user } = await pool.query(queryText, [id]);
 
     if ( user.length === 0) {
-      res.sendStatus(404);
+      return next({statusCode:404, message:"No user found!"});;
     } else {
       res.status(200).send(user[0]);
     }
   } catch(error) {
-    res.sendStatus(500);
+    next(error);
   }
 };
 
@@ -124,8 +113,10 @@ export const checkExistingUser = async (req, res, next) => {
       const { rows: user } = await pool.query(queryText, [id]);
 
       if (user.length === 0) {
-        res.status(404).send("There is no user in the db.");
+        res.status(404).send("");
       } else {
+        // req.user is to store data from user
+        req.user = user[0];
         next();
       }
     } catch (error) {
